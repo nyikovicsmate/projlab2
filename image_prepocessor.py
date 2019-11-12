@@ -8,14 +8,17 @@ from logging_config import logger
 
 class ImagePrepocessor:
     _handlers: List[ImageDatasetHandler]
-    IMG_SHAPE = (70, 70)
-    SPLIT_RATIO = 0.8
 
     def __init__(self):
         self._raw_img_dir = "raw_images"
         self._prepocessed_img_dir = "prepocessed_images"
+        self.img_shape = (70, 70)
+        self.split_ratio = 0.8
+        self.total_img_cnt = 0
+        self.train_img_cnt = 0
+        self.test_img_cnt = 0
         self._handlers = [
-            BSD68GrayHandler(self._raw_img_dir, self._prepocessed_img_dir, self.IMG_SHAPE, self.SPLIT_RATIO)
+            BSD68GrayHandler(self._raw_img_dir, self._prepocessed_img_dir, self.img_shape, self.split_ratio)
         ]
 
     def prepocess(self,
@@ -27,10 +30,12 @@ class ImagePrepocessor:
                 self._create_dirs()
         else:
             logger.info("Using existing directory structure.")
-        # TODO: multithreading
         for h in self._handlers:
-            h.process_images()
-        logger.info("Done preprocessing.")
+            img_cnt = h.process_images()
+            self.total_img_cnt += img_cnt
+        self.train_img_cnt = int(self.total_img_cnt * self.split_ratio)
+        self.test_img_cnt = self.total_img_cnt - self.train_img_cnt
+        logger.info(f"Done preprocessing. Got {self.train_img_cnt} train images and {self.test_img_cnt} test images.")
 
     def _create_dirs(self) -> None:
         # create preprocessed root directory

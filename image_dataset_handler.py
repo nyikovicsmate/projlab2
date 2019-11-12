@@ -35,7 +35,7 @@ class ImageDatasetHandler:
         """
         raise NotImplementedError()
 
-    def process_images(self) -> None:
+    def process_images(self) -> int:
         """
         Convert images to the right format for deep learning.
         :return:
@@ -46,6 +46,7 @@ class ImageDatasetHandler:
             self._img_list[i] = self._grayscale(self._img_list[i])
         logger.info(f"{self.__class__.__name__}: Processed {len(self._img_list)} images.")
         self._save_images()
+        return len(self._img_list)
 
     def _load_images(self) -> None:
         """
