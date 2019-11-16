@@ -95,7 +95,7 @@ class ImageDatasetManager:
             while curr_end_idx > len(idx_list):
                 idx_list = np.append(idx_list, idx_list)
             for idx in idx_list[curr_start_index:curr_end_idx]:
-                img = cv2.imread(self._train_img_path_list[idx], cv2.IMREAD_GRAYSCALE)
+                img = cv2.imread(self._train_img_path_list[idx], cv2.IMREAD_GRAYSCALE) / 255
                 if augment:
                     img = self._augment_image(img)
                 orig_img_list.append(img)
@@ -126,12 +126,17 @@ class ImageDatasetManager:
     @staticmethod
     def _add_noise(img: np.ndarray) -> np.ndarray:
         """
-        Adds noise to the image.
+        Adds noise to the grayscale image.
         :param img:
         :return: image with added noise
         """
-        # TODO
-        raise NotImplementedError()
+        # TODO better/more noises
+        for i in img.shape[0]:
+            if i % 2 == 0:
+                img[i][0::2] = 1
+            else:
+                img[i][1::2] = 1
+        return img
 
     @staticmethod
     def _process_image(img: np.ndarray,
