@@ -70,39 +70,48 @@ class ImageDatasetManager:
             logger.info(f"Processed {len(self._test_img_path_list)} train images.")
         logger.info(f"Done processing.")
 
-    def load_train_batch(self,
-                         batch_size: int,
-                         from_index: int = 0,
-                         randomize: bool = False,
-                         augment: bool = False) -> np.ndarray:
+    def train_batch_generator(self,
+                              batch_size: int,
+                              randomize: bool = False,
+                              augment: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Loads batch_size number of preprocessed train images.
+        Generator function, yields batch_size number of preprocessed train images.
         :param batch_size:
-        :param from_index: if given, function returns train_images[i: i+batch_size] for sequential processing
         :param randomize: if True, returns random sequence of images
         :param augment: if True, function augments images before returning
         :return: list of train images (batch_size, 1, width, height)
         """
-        if from_index != 0 and randomize:
-            raise Exception("Randomized output can not be sequentially indexed.")
+
+        curr_start_index = 0
+        # initialize a list with as many indexes as there are train images
+        idx_list = np.arange(len(self._train_img_path_list))
         if randomize:
-            random_idx_list = np.random.randint(0, len(self._train_img_path_list), batch_size)
-            images = [cv2.imread(self._train_img_path_list[r_idx], cv2.IMREAD_GRAYSCALE) for r_idx in random_idx_list]
-        else:
-            if from_index >= len(self._train_img_path_list):
-                # raise AttributeError(f"from_index is out of range. "
-                #                      f"Got {from_index}, valid range [0, {len(self._train_img_path_list)-1}].")
-                images = []
-            else:
-                images = [cv2.imread(img_path, cv2.IMREAD_GRAYSCALE) for img_path in
-                          self._train_img_path_list[from_index: from_index + batch_size]]
-        if augment:
-            images = np.array([self._augment_image(img) for img in images])
-            # conver it to channels_first format
-            images = images[:, np.newaxis, :, :]
-            # convert to channels_last format
-            # images = images[:, :, :, np.newaxis]
-        return images
+            # shuffle the indexes in-place
+            np.random.shuffle(idx_list)
+        while True:
+            orig_img_list = []
+            noisy_img_list = []
+            curr_end_idx = curr_start_index + batch_size
+            while curr_end_idx > len(idx_list):
+                idx_list = np.append(idx_list, idx_list)
+            for idx in idx_list[curr_start_index:curr_end_idx]:
+                img = cv2.imread(self._train_img_path_list[idx], cv2.IMREAD_GRAYSCALE)
+                if augment:
+                    img = self._augment_image(img)
+                orig_img_list.append(img)
+                noisy_img_list.append(self._add_noise(img))
+            # increase the starting index for the next generation
+            curr_start_index += batch_size
+            # if we have reached the end of the available images list,
+            # re-initialize (and re-randomize if necessary) the index list and start from the beginning again
+            if curr_start_index > len(self._train_img_path_list):
+                curr_start_index = 0
+                idx_list = np.arange(len(self._train_img_path_list))
+                if randomize:
+                    # shuffle the indexes in-place
+                    np.random.shuffle(idx_list)
+            # yield the original and noisy images in a channel_first format
+            yield np.array(orig_img_list[:, np.newaxis, :, :]), np.array(noisy_img_list[:, np.newaxis, :, :])
 
     @staticmethod
     def _augment_image(img: np.ndarray) -> np.ndarray:
@@ -112,7 +121,17 @@ class ImageDatasetManager:
         :return: augmented image
         """
         # TODO
-        return img
+        raise NotImplementedError()
+
+    @staticmethod
+    def _add_noise(img: np.ndarray) -> np.ndarray:
+        """
+        Adds noise to the image.
+        :param img:
+        :return: image with added noise
+        """
+        # TODO
+        raise NotImplementedError()
 
     @staticmethod
     def _process_image(img: np.ndarray,
