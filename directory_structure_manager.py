@@ -12,7 +12,7 @@ class DirectoryStructureManager:
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.train_dir = os.path.join(self.root_dir, "train")
         self.test_dir = os.path.join(self.root_dir, "test")
-        self.is_created = False
+        self.is_created = True if os.path.exists(self.train_dir) and os.path.exists(self.test_dir) else False
 
     def create_directory_structure(self) -> None:
         """

@@ -43,31 +43,43 @@ class ImageDatasetManager:
         if overwrite:
             logger.info("Deleting obsolete directory structure.")
             self._dsm.delete_directory_structure()
-        if not self._dsm.is_created:
-            logger.info("Creating directory structure.")
-            self._dsm.create_directory_structure()
-            raw_train_img_path_list = []
-            raw_test_img_path_list = []
-            for handler in self._handlers:
-                list_ = handler.get_img_path_list(self._dataset_src_dir)
-                split_idx = int(self.split_ratio * len(list_))
-                raw_train_img_path_list.extend(list_[:split_idx])
-                raw_test_img_path_list.extend(list_[split_idx:])
-            logger.info(f"Found {len(raw_train_img_path_list)} train, {len(raw_test_img_path_list)} test images.")
-            for idx, raw_train_img_path in enumerate(raw_train_img_path_list):
-                img = cv2.imread(raw_train_img_path)
-                img = self._process_image(img, self.dst_shape)
-                full_path = os.path.join(self._dsm.train_dir, self.idx_to_img_name(idx))
-                cv2.imwrite(full_path, img)
-                self._train_img_path_list.append(full_path)
-            logger.info(f"Processed {len(self._train_img_path_list)} train images.")
-            for idx, raw_test_img_path in enumerate(raw_test_img_path_list):
-                img = cv2.imread(raw_test_img_path)
-                img = self._process_image(img, self.dst_shape)
-                full_path = os.path.join(self._dsm.test_dir, self.idx_to_img_name(idx))
-                cv2.imwrite(full_path, img)
-                self._test_img_path_list.append(full_path)
-            logger.info(f"Processed {len(self._test_img_path_list)} train images.")
+        else:
+            if not self._dsm.is_created:
+                logger.info("Creating directory structure.")
+                self._dsm.create_directory_structure()
+                raw_train_img_path_list = []
+                raw_test_img_path_list = []
+                for handler in self._handlers:
+                    list_ = handler.get_img_path_list(self._dataset_src_dir)
+                    split_idx = int(self.split_ratio * len(list_))
+                    raw_train_img_path_list.extend(list_[:split_idx])
+                    raw_test_img_path_list.extend(list_[split_idx:])
+                logger.info(f"Found {len(raw_train_img_path_list)} train, {len(raw_test_img_path_list)} test images.")
+                for idx, raw_train_img_path in enumerate(raw_train_img_path_list):
+                    img = cv2.imread(raw_train_img_path)
+                    img = self._process_image(img, self.dst_shape)
+                    full_path = os.path.join(self._dsm.train_dir, self.idx_to_img_name(idx))
+                    cv2.imwrite(full_path, img)
+                    self._train_img_path_list.append(full_path)
+                logger.info(f"Processed {len(self._train_img_path_list)} train images.")
+                for idx, raw_test_img_path in enumerate(raw_test_img_path_list):
+                    img = cv2.imread(raw_test_img_path)
+                    img = self._process_image(img, self.dst_shape)
+                    full_path = os.path.join(self._dsm.test_dir, self.idx_to_img_name(idx))
+                    cv2.imwrite(full_path, img)
+                    self._test_img_path_list.append(full_path)
+                logger.info(f"Processed {len(self._test_img_path_list)} train images.")
+            else:
+                logger.info("Using existing images.")
+                train_img_path_list = os.listdir(self._dsm.train_dir)
+                for img_path in train_img_path_list:
+                    full_path = os.path.join(self._dsm.train_dir, img_path)
+                    self._train_img_path_list.append(full_path)
+                test_img_path_list = os.listdir(self._dsm.test_dir)
+                for img_path in test_img_path_list:
+                    full_path = os.path.join(self._dsm.test_dir, img_path)
+                    self._test_img_path_list.append(full_path)
+                logger.info(f"Found {len(train_img_path_list)} train, {len(test_img_path_list)} test images.")
         logger.info(f"Done processing.")
 
     def train_batch_generator(self,
@@ -111,7 +123,7 @@ class ImageDatasetManager:
                     # shuffle the indexes in-place
                     np.random.shuffle(idx_list)
             # yield the original and noisy images in a channel_first format
-            yield np.array(orig_img_list[:, np.newaxis, :, :]), np.array(noisy_img_list[:, np.newaxis, :, :])
+            yield np.array(orig_img_list)[:, np.newaxis, :, :], np.array(noisy_img_list)[:, np.newaxis, :, :]
 
     @staticmethod
     def _augment_image(img: np.ndarray) -> np.ndarray:
@@ -131,7 +143,7 @@ class ImageDatasetManager:
         :return: image with added noise
         """
         # TODO better/more noises
-        for i in img.shape[0]:
+        for i in range(img.shape[0]):
             if i % 2 == 0:
                 img[i][0::2] = 1
             else:
