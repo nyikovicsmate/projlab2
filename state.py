@@ -1,72 +1,64 @@
-from typing import Tuple
-
+import copy
 import numpy as np
 import cv2
+import tensorflow as tf
 
 
 class State:
     MOVE_RANGE = 3
 
-    def __init__(self,
-                 image_batch: np.ndarray):
-        self.image_batch = image_batch.astype(np.float32)
-
-    # def reset(self,
-    #           x: np.ndarray) -> None:
-    #     """
-    #     :param x: input image list (batch_size, channels, width, height)
-    #     :return: None
-    #     """
-    #     self.image_batch = x
-
-    def step(self,
-             actions: np.ndarray) -> None:
+    @staticmethod
+    def update(image_batch: np.ndarray,
+                      actions_batch: np.ndarray,
+                      in_place: bool = False) -> np.ndarray:
         """
-        For each pixel in the image applies the action indicated by the act mx.
-        :param actions: action (batch_size, channels, width, height) shaped mx with values 0-(N_ACTIONS-1)
-        :return: None
+        :param image_batch:
+        :param actions_batch: action img.shape-d mx with values 0-(N_ACTIONS-1)
+        :param in_place: if True, modifies the image_batch array, otherwise returns a new copy
+        :return: the modified image batch
         """
-        # TODO convert it channel_last format
-        # TODO better solution for move_range magic
-        # move_range = 3
+        image_batch = image_batch.astype(np.float32)
+        if in_place:
+            image_batch_copy = image_batch
+        else:
+            image_batch_copy = copy.deepcopy(image_batch)
         neutral = (State.MOVE_RANGE - 1) / 2
-        move = np.array(actions).astype(np.float32)
-        # move = actions.astype(np.float32)
+        move = actions_batch.astype(np.float32)
         move = (move - neutral) / 255
-        moved_image = self.image_batch + move[:, np.newaxis, :, :]
-        gaussian = np.zeros(self.image_batch.shape, self.image_batch.dtype)
-        gaussian2 = np.zeros(self.image_batch.shape, self.image_batch.dtype)
-        bilateral = np.zeros(self.image_batch.shape, self.image_batch.dtype)
-        bilateral2 = np.zeros(self.image_batch.shape, self.image_batch.dtype)
-        median = np.zeros(self.image_batch.shape, self.image_batch.dtype)
-        box = np.zeros(self.image_batch.shape, self.image_batch.dtype)
-        b, c, h, w = self.image_batch.shape
-        # if there is any other predicted action than altering the pixel by 1, apply it for the whole image
-        temp = 0
-        for i in range(b):
-            if np.sum(actions[i] == State.MOVE_RANGE) > 0:
-                gaussian[i, 0] = cv2.GaussianBlur(self.image_batch[i, 0], ksize=(5, 5), sigmaX=0.5)
-                temp += 1
-            if np.sum(actions[i] == State.MOVE_RANGE + 1) > 0:
-                bilateral[i, 0] = cv2.bilateralFilter(self.image_batch[i, 0], d=5, sigmaColor=0.1, sigmaSpace=5)
-                temp += 1
-            if np.sum(actions[i] == State.MOVE_RANGE + 2) > 0:
-                median[i, 0] = cv2.medianBlur(self.image_batch[i, 0], ksize=5)
-                temp += 1
-            if np.sum(actions[i] == State.MOVE_RANGE + 3) > 0:
-                gaussian2[i, 0] = cv2.GaussianBlur(self.image_batch[i, 0], ksize=(5, 5), sigmaX=1.5)
-                temp += 1
-            if np.sum(actions[i] == State.MOVE_RANGE + 4) > 0:
-                bilateral2[i, 0] = cv2.bilateralFilter(self.image_batch[i, 0], d=5, sigmaColor=1.0, sigmaSpace=5)
-                temp += 1
-            if np.sum(actions[i] == State.MOVE_RANGE + 5) > 0:
-                box[i, 0] = cv2.boxFilter(self.image_batch[i, 0], ddepth=-1, ksize=(5, 5))
-                temp += 1
+        moved_image = image_batch_copy + move[:, np.newaxis, :, :]
+        gaussian = np.zeros(image_batch_copy.shape, image_batch_copy.dtype)
+        gaussian2 = np.zeros(image_batch_copy.shape, image_batch_copy.dtype)
+        bilateral = np.zeros(image_batch_copy.shape, image_batch_copy.dtype)
+        bilateral2 = np.zeros(image_batch_copy.shape, image_batch_copy.dtype)
+        median = np.zeros(image_batch_copy.shape, image_batch_copy.dtype)
+        box = np.zeros(image_batch_copy.shape, image_batch_copy.dtype)
+        b, c, h, w = image_batch_copy.shape
+        for i in range(0, b):
+            if np.sum(actions_batch[i] == State.MOVE_RANGE) > 0:
+                gaussian[i, 0] = cv2.GaussianBlur(image_batch_copy[i, 0], ksize=(5, 5), sigmaX=0.5)
+            if np.sum(actions_batch[i] == State.MOVE_RANGE + 1) > 0:
+                bilateral[i, 0] = cv2.bilateralFilter(image_batch_copy[i, 0], d=5, sigmaColor=0.1, sigmaSpace=5)
+            if np.sum(actions_batch[i] == State.MOVE_RANGE + 2) > 0:
+                median[i, 0] = cv2.medianBlur(image_batch_copy[i, 0], ksize=5)
+            if np.sum(actions_batch[i] == State.MOVE_RANGE + 3) > 0:
+                gaussian2[i, 0] = cv2.GaussianBlur(image_batch_copy[i, 0], ksize=(5, 5), sigmaX=1.5)
+            if np.sum(actions_batch[i] == State.MOVE_RANGE + 4) > 0:
+                bilateral2[i, 0] = cv2.bilateralFilter(image_batch_copy[i, 0], d=5, sigmaColor=1.0, sigmaSpace=5)
+            if np.sum(actions_batch[i] == State.MOVE_RANGE + 5) > 0:
+                box[i, 0] = cv2.boxFilter(image_batch_copy[i, 0], ddepth=-1, ksize=(5, 5))
 
-        self.image_batch = moved_image
-        self.image_batch = np.where(actions[:, np.newaxis, :, :] == State.MOVE_RANGE, gaussian, self.image_batch)
-        self.image_batch = np.where(actions[:, np.newaxis, :, :] == State.MOVE_RANGE + 1, bilateral, self.image_batch)
-        self.image_batch = np.where(actions[:, np.newaxis, :, :] == State.MOVE_RANGE + 2, median, self.image_batch)
-        self.image_batch = np.where(actions[:, np.newaxis, :, :] == State.MOVE_RANGE + 3, gaussian2, self.image_batch)
-        self.image_batch = np.where(actions[:, np.newaxis, :, :] == State.MOVE_RANGE + 4, bilateral2, self.image_batch)
-        self.image_batch = np.where(actions[:, np.newaxis, :, :] == State.MOVE_RANGE + 5, box, self.image_batch)
+        image_batch_copy = moved_image
+        image_batch_copy = np.where(actions_batch[:, np.newaxis, :, :] == State.MOVE_RANGE, gaussian,
+                                    image_batch_copy)
+        image_batch_copy = np.where(actions_batch[:, np.newaxis, :, :] == State.MOVE_RANGE + 1, bilateral,
+                                    image_batch_copy)
+        image_batch_copy = np.where(actions_batch[:, np.newaxis, :, :] == State.MOVE_RANGE + 2, median,
+                                    image_batch_copy)
+        image_batch_copy = np.where(actions_batch[:, np.newaxis, :, :] == State.MOVE_RANGE + 3, gaussian2,
+                                    image_batch_copy)
+        image_batch_copy = np.where(actions_batch[:, np.newaxis, :, :] == State.MOVE_RANGE + 4, bilateral2,
+                                    image_batch_copy)
+        image_batch_copy = np.where(actions_batch[:, np.newaxis, :, :] == State.MOVE_RANGE + 5, box,
+                                    image_batch_copy)
+
+        return image_batch_copy

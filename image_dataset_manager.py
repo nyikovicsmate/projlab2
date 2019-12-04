@@ -123,7 +123,8 @@ class ImageDatasetManager:
                     # shuffle the indexes in-place
                     np.random.shuffle(idx_list)
             # yield the original and noisy images in a channel_first format
-            yield np.array(orig_img_list)[:, np.newaxis, :, :], np.array(noisy_img_list)[:, np.newaxis, :, :]
+            yield np.array(orig_img_list).astype(np.float32)[:, np.newaxis, :, :], \
+                  np.array(noisy_img_list).astype(np.float32)[:, np.newaxis, :, :]
 
     @staticmethod
     def _augment_image(img: np.ndarray) -> np.ndarray:
@@ -142,6 +143,7 @@ class ImageDatasetManager:
         :param img:
         :return: image with added noise
         """
+        img = np.copy(img)
         # TODO better/more noises
         for i in range(img.shape[0]):
             if i % 2 == 0:
