@@ -111,6 +111,7 @@ class PixelwiseA3CModel(tf.keras.models.Model):
                                                    kernel_initializer=None,
                                                    bias_initializer=None)
 
+    @tf.function
     def call(self, inputs, training=None, mask=None):
         x = self.inputs(inputs)
         x = self.conv1(x)
