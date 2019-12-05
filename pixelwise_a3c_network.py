@@ -22,7 +22,7 @@ class PixelwiseA3CNetwork:
     def train(self,
               batch_generator: Iterator,
               epochs: int,
-              steps_per_episode: int = 4,
+              steps_per_episode: int = 5,
               learning_rate: float = 0.001,
               discount_factor: float = 0.95,
               resume_training: bool = False):
@@ -71,6 +71,8 @@ class PixelwiseA3CNetwork:
                     a_t, V_t = self.local_model(image_batch_nchw)
                     # sample the actions
                     sampled_a_t = self._sample_tf(a_t)
+                    # clip distribution into range to avoid 0 values, which cause problem with calculating logarithm
+                    a_t = tf.clip_by_value(a_t, 1e-6, 1)
                     a_t = tf.transpose(a_t, perm=[0, 3, 1, 2])
                     V_t = tf.transpose(V_t, perm=[0, 3, 1, 2])
 
@@ -104,8 +106,6 @@ class PixelwiseA3CNetwork:
                     critic_loss += (R - V[t]) ** 2 / 2
 
                 total_loss = tf.reduce_mean(actor_loss + critic_loss)
-                if tf.math.is_nan(total_loss):
-                    print(total_loss)
 
                 logger.info(f"total loss: {total_loss}")
                 actor_grads = tape.gradient(total_loss, self.local_model.trainable_variables)
