@@ -8,8 +8,9 @@ if __name__ == '__main__':
     logger.info(f"Started at: {time.time()}")
     idm = ImageDatasetManager(dataset_src_dir="raw_images", dataset_dst_dir="preprocessed_images")
     idm.preprocess(overwrite=False)
-    batch_size = 32
+    batch_size = 64
     batch_generator = idm.train_batch_generator(batch_size)
     network = PixelwiseA3CNetwork(input_shape=(batch_size, 70, 70, 1))
     network.train(batch_generator=batch_generator,
-                  epochs=10000)
+                  epochs=30000,
+                  resume_training=True)

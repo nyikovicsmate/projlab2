@@ -1,8 +1,7 @@
-import copy
-from typing import Tuple, Iterator, List
+import os
+from typing import Tuple, Iterator
 import tensorflow as tf
 import numpy as np
-from collections import defaultdict
 
 from logging_config import logger
 from state import State
@@ -25,16 +24,34 @@ class PixelwiseA3CNetwork:
               epochs: int,
               steps_per_episode: int = 4,
               learning_rate: float = 0.001,
-              discount_factor: float = 0.95):
-        logger.info("Started training.")
+              discount_factor: float = 0.95,
+              resume_training: bool = False):
+        model_dir = os.path.join(os.getcwd(), "model")
+        model_file = os.path.join(model_dir, "checkpoint")
+        model_epochs_file = os.path.join(model_dir, "epochs.txt")
+        epochs_elapsed = 0
+        learning_rate_decay_rate = 0.9
+        # resume a previously interrupted training
+        if resume_training and os.path.exists(model_file):
+            self.local_model.load_weights(model_file)
+            with open(model_epochs_file, "r") as f:
+                epochs_elapsed = int(f.readline())
+            logger.info(f"Resuming training.")
+            logger.info(f"Using model file {model_file}")
+            learning_rate *= epochs_elapsed * learning_rate_decay_rate
+            epochs -= epochs_elapsed
+            if epochs_elapsed >= epochs:
+                logger.warn(f"Training epoch count exceeds originally intended: {epochs_elapsed} vs. {epochs}")
+                logger.warn("Stopping training.")
+                return
         learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=learning_rate,
                                                                        decay_steps=epochs,
-                                                                       decay_rate=0.9)
+                                                                       decay_rate=learning_rate_decay_rate)
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate,
                                              beta_1=0.9,
                                              beta_2=0.999,
                                              epsilon=1e-8)
-        for epoch in range(epochs):
+        for epoch in range(epochs_elapsed, epochs):
             logger.info(f"epoch {epoch}")
             # load global network variables
             # self.local_model.actor_model.set_weights(self.global_model.actor_model.get_weights())
@@ -94,9 +111,11 @@ class PixelwiseA3CNetwork:
                 actor_grads = tape.gradient(total_loss, self.local_model.trainable_variables)
             optimizer.apply_gradients(zip(actor_grads, self.local_model.trainable_variables))
 
-            if epoch > 0 and epoch % 100 == 0:
-                logger.info("Saving model.")
-                tf.keras.models.save_model(self.local_model, "model.tf")
+            if epoch > 0 and epoch % 50 == 0:
+                logger.info(f"Saving model after {epoch + 1} epochs.")
+                self.local_model.save_weights(model_file, overwrite=True, save_format="tf")
+                with open(model_epochs_file, "w") as f:
+                    f.write(str(epoch + 1))
 
     @staticmethod
     @tf.function
