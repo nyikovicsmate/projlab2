@@ -155,13 +155,30 @@ class ImageDatasetManager:
     def _process_image(img: np.ndarray,
                        dst_shape: Tuple[int, int]) -> np.ndarray:
         """
-        :param img: raw image
-        :param dst_shape: desired shape (width, height)
-        :return: prerocessed image
+        Transforms parameter image into grayscale and clips an arbitrary sized section out of it.
+        :param img: RGB image
+        :param dst_shape: desired clip shape (width, height)
+        :return: clipped grayscale image
         """
+        # resize original image before clipping if needed
+        width_resize_factor = 0
+        height_resize_factor = 0
+        orig_shape = img.shape[0:2]  # only need the h,w values
+        if dst_shape[0] > orig_shape[1]:  # dst_shape format is (w,h) orig_shape however is (h,w) (cv2 speciality)
+            width_resize_factor = (dst_shape[0] // orig_shape[1]) + 1
+        if dst_shape[1] > orig_shape[0]:
+            height_resize_factor = (dst_shape[1] // orig_shape[0]) + 1
+        if width_resize_factor != 0 or height_resize_factor != 0:
+            resize_factor = width_resize_factor if width_resize_factor > height_resize_factor else height_resize_factor
+            orig_shape = tuple([o * resize_factor for o in orig_shape])
+            img = cv2.resize(src=img, dsize=(orig_shape[1], orig_shape[0]), interpolation=cv2.INTER_LINEAR)
+        # randomly clip image
+        width_clip_idx_start = np.random.randint(low=0, high=orig_shape[1] - dst_shape[0])
+        height_clip_idx_start = np.random.randint(low=0, high=orig_shape[0] - dst_shape[1])
+        img = img[height_clip_idx_start: height_clip_idx_start + dst_shape[1],
+              width_clip_idx_start: width_clip_idx_start + dst_shape[0]]
+        # grayscale image
         img = cv2.cvtColor(src=img, code=cv2.COLOR_RGB2GRAY)
-        # TODO crop instead of just scale
-        img = cv2.resize(src=img, dsize=dst_shape, interpolation=cv2.INTER_NEAREST)
         return img
 
     @staticmethod
