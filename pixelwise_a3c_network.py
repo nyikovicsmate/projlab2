@@ -83,6 +83,7 @@ class PixelwiseA3CNetwork:
                     s_t1 = State.update(s_t0, sampled_a_t.numpy())
                     r_t = self._mse(tf.cast(orig_img_batch, tf.float32), tf.cast(s_t0, tf.float32), s_t1)
                     r[t] = tf.cast(r_t, dtype=tf.float32)
+                    s_t0 = s_t1
                     epoch_r += np.mean(r_t) * np.power(discount_factor, t)
 
                 logger.info(f"epoch reward: {epoch_r}")
