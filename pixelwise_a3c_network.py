@@ -1,5 +1,7 @@
 import os
 from typing import Tuple, Iterator
+
+import cv2
 import tensorflow as tf
 import numpy as np
 
@@ -117,6 +119,38 @@ class PixelwiseA3CNetwork:
                 self.local_model.save_weights(model_file, overwrite=True, save_format="tf")
                 with open(model_epochs_file, "w") as f:
                     f.write(str(epoch + 1))
+
+    def predict(self,
+                batch_generator: Iterator,
+                steps_per_episode: int = 5):
+        predictions_dir = os.path.join(os.getcwd(), "predictions")
+        if not os.path.exists(predictions_dir):
+            os.mkdir(predictions_dir)
+        model_dir = os.path.join(os.getcwd(), "model")
+        model_file = os.path.join(model_dir, "checkpoint")
+        self.local_model.load_weights(model_file)
+
+        orig_img_batch, noisy_img_batch = next(batch_generator)
+        s_t0 = noisy_img_batch
+        for t in range(steps_per_episode):
+            image_batch_nchw = tf.transpose(s_t0, perm=[0, 2, 3, 1])
+            # predict the actions and values
+            a_t, _ = self.local_model(image_batch_nchw)
+            # sample the actions
+            sampled_a_t = self._sample_tf(a_t)
+            # update the current state/image with the predicted actions
+            s_t1 = State.update(s_t0, sampled_a_t.numpy())
+            s_t0 = s_t1
+        # write out images
+        orig_image_batch_nchw = tf.transpose(orig_img_batch, perm=[0, 2, 3, 1])
+        predicted_image_batch_nchw = tf.transpose(s_t0, perm=[0, 2, 3, 1])
+        for i in range(orig_image_batch_nchw.shape[0]):
+            img_o = np.squeeze(orig_image_batch_nchw[i], axis=3) * 255
+            img_p = np.squeeze(predicted_image_batch_nchw[i], axis=3) * 255
+            orig_img_path = os.path.join(predictions_dir, f"{i}_o.jpg")
+            predicted_img_path = os.path.join(predictions_dir, f"{i}_p.jpg")
+            cv2.imwrite(orig_img_path, img_o)
+            cv2.imwrite(predicted_img_path, img_p)
 
     @staticmethod
     @tf.function
