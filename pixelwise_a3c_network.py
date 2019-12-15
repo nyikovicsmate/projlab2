@@ -24,7 +24,7 @@ class PixelwiseA3CNetwork:
     def train(self,
               batch_generator: Iterator,
               epochs: int,
-              steps_per_episode: int = 5,
+              steps_per_episode: int = 4,
               learning_rate: float = 0.001,
               discount_factor: float = 0.95,
               resume_training: bool = False):
@@ -105,6 +105,7 @@ class PixelwiseA3CNetwork:
                     actor_loss -= log_prob * A
                     # Entropy is maximized
                     actor_loss -= beta * entropy
+                    actor_loss *= 0.5 # multiply loss by 0.5 coefficient
                     # Accumulate gradients of value function
                     critic_loss += (R - V[t]) ** 2 / 2
 
