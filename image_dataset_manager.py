@@ -27,7 +27,8 @@ class ImageDatasetManager:
         self._dataset_src_dir = dataset_src_dir
         self._dsm = DirectoryStructureManager(dataset_dst_dir)
         self._handlers = [
-            BSD68GrayHandler()
+            BSD68GrayHandler(),
+            WaterlooExploartionHandler()
         ]
 
     # noinspection DuplicatedCode
