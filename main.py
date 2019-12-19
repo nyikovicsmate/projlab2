@@ -6,18 +6,17 @@ from pixelwise_a3c_network import PixelwiseA3CNetwork
 
 
 def train():
-    # logger.info(f"Started at: {time.time()}")
     w, h = (70, 70)
     idm = ImageDatasetManager(dataset_src_dir="raw_images",
                               dataset_dst_dir="preprocessed_images",
                               dst_shape=(w, h),
                               split_ratio=0.9)
     idm.preprocess(overwrite=False)
-    batch_size = 2
+    batch_size = 64
     batch_generator = idm.train_batch_generator(batch_size)
     network = PixelwiseA3CNetwork(input_shape=(batch_size, w, h, 1))
     network.train(batch_generator=batch_generator,
-                  epochs=30000,
+                  epochs=1000,
                   resume_training=False)
 
 
@@ -28,7 +27,7 @@ def predict():
                               dst_shape=(w, h),
                               split_ratio=0.9)
     idm.preprocess(overwrite=False)
-    batch_size = 20
+    batch_size = 100
     batch_generator = idm.train_batch_generator(batch_size)
     network = PixelwiseA3CNetwork(input_shape=(batch_size, w, h, 1))
     network.predict(batch_generator)

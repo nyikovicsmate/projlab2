@@ -24,7 +24,7 @@ class PixelwiseA3CNetwork:
     def train(self,
               batch_generator: Iterator,
               epochs: int,
-              steps_per_episode: int = 4,
+              steps_per_episode: int = 5,
               learning_rate: float = 0.001,
               discount_factor: float = 0.95,
               resume_training: bool = False):
@@ -146,8 +146,8 @@ class PixelwiseA3CNetwork:
         orig_image_batch_nchw = tf.transpose(orig_img_batch, perm=[0, 2, 3, 1])
         predicted_image_batch_nchw = tf.transpose(s_t0, perm=[0, 2, 3, 1])
         for i in range(orig_image_batch_nchw.shape[0]):
-            img_o = np.squeeze(orig_image_batch_nchw[i], axis=3) * 255
-            img_p = np.squeeze(predicted_image_batch_nchw[i], axis=3) * 255
+            img_o = np.squeeze(orig_image_batch_nchw[i], axis=2) * 255
+            img_p = np.squeeze(predicted_image_batch_nchw[i], axis=2) * 255
             orig_img_path = os.path.join(predictions_dir, f"{i}_o.jpg")
             predicted_img_path = os.path.join(predictions_dir, f"{i}_p.jpg")
             cv2.imwrite(orig_img_path, img_o)
