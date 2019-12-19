@@ -13,11 +13,11 @@ def train():
                               dst_shape=(w, h),
                               split_ratio=0.9)
     idm.preprocess(overwrite=False)
-    batch_size = 2
+    batch_size = 64
     batch_generator = idm.train_batch_generator(batch_size)
     network = PixelwiseA3CNetwork(input_shape=(batch_size, w, h, 1))
     network.train(batch_generator=batch_generator,
-                  epochs=30000,
+                  epochs=1000,
                   resume_training=False)
 
 
@@ -28,7 +28,7 @@ def predict():
                               dst_shape=(w, h),
                               split_ratio=0.9)
     idm.preprocess(overwrite=False)
-    batch_size = 20
+    batch_size = 64
     batch_generator = idm.train_batch_generator(batch_size)
     network = PixelwiseA3CNetwork(input_shape=(batch_size, w, h, 1))
     network.predict(batch_generator)

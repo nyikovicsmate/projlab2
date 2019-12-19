@@ -115,7 +115,7 @@ class PixelwiseA3CNetwork:
                 actor_grads = tape.gradient(total_loss, self.local_model.trainable_variables)
             optimizer.apply_gradients(zip(actor_grads, self.local_model.trainable_variables))
 
-            if epoch > 0 and epoch % 50 == 0:
+            if epoch > 0 and (epoch % 50) - 1 == 0:
                 logger.info(f"Saving model after {epoch + 1} epochs.")
                 self.local_model.save_weights(model_file, overwrite=True, save_format="tf")
                 with open(model_epochs_file, "w") as f:
@@ -146,8 +146,8 @@ class PixelwiseA3CNetwork:
         orig_image_batch_nchw = tf.transpose(orig_img_batch, perm=[0, 2, 3, 1])
         predicted_image_batch_nchw = tf.transpose(s_t0, perm=[0, 2, 3, 1])
         for i in range(orig_image_batch_nchw.shape[0]):
-            img_o = np.squeeze(orig_image_batch_nchw[i], axis=3) * 255
-            img_p = np.squeeze(predicted_image_batch_nchw[i], axis=3) * 255
+            img_o = np.squeeze(orig_image_batch_nchw[i], axis=2) * 255
+            img_p = np.squeeze(predicted_image_batch_nchw[i], axis=2) * 255
             orig_img_path = os.path.join(predictions_dir, f"{i}_o.jpg")
             predicted_img_path = os.path.join(predictions_dir, f"{i}_p.jpg")
             cv2.imwrite(orig_img_path, img_o)
