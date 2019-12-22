@@ -86,7 +86,8 @@ class PixelwiseA3CNetwork:
                     V[t] = V_t
                     # update the current state/image with the predicted actions
                     s_t1 = State.update(s_t0, sampled_a_t.numpy())
-                    r_t = self._mse(tf.cast(orig_img_batch, tf.float32), tf.cast(s_t0, tf.float32), s_t1)
+                    # r_t = self._mse(tf.cast(orig_img_batch, tf.float32), tf.cast(s_t0, tf.float32), s_t1)
+                    r_t = self._psnr(tf.cast(orig_img_batch, tf.float32), tf.cast(s_t0, tf.float32), s_t1)
                     r[t] = tf.cast(r_t, dtype=tf.float32)
                     s_t0 = s_t1
                     epoch_r += np.mean(r_t) * np.power(discount_factor, t)
@@ -173,6 +174,32 @@ class PixelwiseA3CNetwork:
 
     @staticmethod
     @tf.function
+    def _psnr(orig_image_batch, s0_image_batch, s1_image_batch):
+        """
+        Calculates the difference in peak signal to noise ratio of the original image - state[t] image
+        and the original image - state[t+1] image.
+        :param orig_image_batch:
+        :param s0_image_batch:
+        :param s1_image_batch:
+        :return: psnr(orig, s0) - psnr(orig, s1)
+        """
+        # VERSION 1
+        # psnr_o_s0 = tf.image.psnr(orig_image_batch, s0_image_batch, max_val=1)
+        # psnr_o_s1 = tf.image.psnr(orig_image_batch, s1_image_batch, max_val=1)
+        # return psnr_o_s0 - psnr_o_s1
+
+        # VERSION 2
+        mse1 = tf.square(orig_image_batch - s0_image_batch)
+        mse2 = tf.square(orig_image_batch - s1_image_batch)
+        # add a small value to 0s to avoid division by 0
+        mse1 = tf.clip_by_value(mse1, 1e-6, 1)
+        mse2 = tf.clip_by_value(mse2, 1e-6, 1)
+        psnr1 = 10 * tf.math.log(1.0 / mse1) / tf.math.log(10.0)
+        psnr2 = 10 * tf.math.log(1.0 / mse2) / tf.math.log(10.0)
+        return psnr1 - psnr2
+
+    @staticmethod
+    @tf.function
     def _myentropy(prob, log_prob):
         return tf.stack([- tf.math.reduce_sum(prob * log_prob, axis=1)], axis=1)
 
@@ -226,3 +253,7 @@ class PixelwiseA3CNetwork:
         d = tf.random.categorical(d, num_samples=1)
         d = tf.reshape(d, distribution.shape[0:-1])
         return d
+
+
+
+
