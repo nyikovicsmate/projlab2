@@ -43,8 +43,8 @@ class PixelwiseA3CNetwork:
             learning_rate *= epochs_elapsed * learning_rate_decay_rate
             epochs -= epochs_elapsed
             if epochs_elapsed >= epochs:
-                logger.warn(f"Training epoch count exceeds originally intended: {epochs_elapsed} vs. {epochs}")
-                logger.warn("Stopping training.")
+                logger.warning(f"Training epoch count exceeds originally intended: {epochs_elapsed} vs. {epochs}")
+                logger.warning("Stopping training.")
                 return
         learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=learning_rate,
                                                                        decay_steps=epochs,
@@ -59,6 +59,9 @@ class PixelwiseA3CNetwork:
             # self.local_model.actor_model.set_weights(self.global_model.actor_model.get_weights())
             # self.local_model.critic_model.set_weights(self.global_model.critic_model.get_weights())
             orig_img_batch, noisy_img_batch = next(batch_generator)
+            if len(orig_img_batch) == 0 or len(noisy_img_batch) == 0:
+                logger.warning("Generator did not yield any original or noisiy (or both) image, stopping training.")
+                return
             s_t0 = noisy_img_batch
             epoch_r = 0
             r = {}  # reward

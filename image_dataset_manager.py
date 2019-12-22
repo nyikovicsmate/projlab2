@@ -50,25 +50,30 @@ class ImageDatasetManager:
             raw_train_img_path_list = []
             raw_test_img_path_list = []
             for handler in self._handlers:
-                list_ = handler.get_img_path_list(self._dataset_src_dir)
-                split_idx = int(self.split_ratio * len(list_))
-                raw_train_img_path_list.extend(list_[:split_idx])
-                raw_test_img_path_list.extend(list_[split_idx:])
+                try:
+                    list_ = handler.get_img_path_list(self._dataset_src_dir)
+                    split_idx = int(self.split_ratio * len(list_))
+                    raw_train_img_path_list.extend(list_[:split_idx])
+                    raw_test_img_path_list.extend(list_[split_idx:])
+                except FileNotFoundError:
+                    logger.warning(f"{handler.__class__.__name__} did not return any files, skipping.")
             logger.info(f"Found {len(raw_train_img_path_list)} train, {len(raw_test_img_path_list)} test images.")
-            for idx, raw_train_img_path in enumerate(raw_train_img_path_list):
-                img = cv2.imread(raw_train_img_path)
-                img = self._process_image(img, self.dst_shape)
-                full_path = os.path.join(self._dsm.train_dir, self.idx_to_img_name(idx))
-                cv2.imwrite(full_path, img)
-                self._train_img_path_list.append(full_path)
+            if len(raw_train_img_path_list) > 0:
+                for idx, raw_train_img_path in enumerate(raw_train_img_path_list):
+                    img = cv2.imread(raw_train_img_path)
+                    img = self._process_image(img, self.dst_shape)
+                    full_path = os.path.join(self._dsm.train_dir, self.idx_to_img_name(idx))
+                    cv2.imwrite(full_path, img)
+                    self._train_img_path_list.append(full_path)
             logger.info(f"Processed {len(self._train_img_path_list)} train images.")
-            for idx, raw_test_img_path in enumerate(raw_test_img_path_list):
-                img = cv2.imread(raw_test_img_path)
-                img = self._process_image(img, self.dst_shape)
-                full_path = os.path.join(self._dsm.test_dir, self.idx_to_img_name(idx))
-                cv2.imwrite(full_path, img)
-                self._test_img_path_list.append(full_path)
-            logger.info(f"Processed {len(self._test_img_path_list)} train images.")
+            if len(raw_test_img_path_list) > 0:
+                for idx, raw_test_img_path in enumerate(raw_test_img_path_list):
+                    img = cv2.imread(raw_test_img_path)
+                    img = self._process_image(img, self.dst_shape)
+                    full_path = os.path.join(self._dsm.test_dir, self.idx_to_img_name(idx))
+                    cv2.imwrite(full_path, img)
+                    self._test_img_path_list.append(full_path)
+            logger.info(f"Processed {len(self._test_img_path_list)} test images.")
         else:
             logger.info("Using existing images.")
             train_img_path_list = os.listdir(self._dsm.train_dir)
@@ -79,7 +84,11 @@ class ImageDatasetManager:
             for img_path in test_img_path_list:
                 full_path = os.path.join(self._dsm.test_dir, img_path)
                 self._test_img_path_list.append(full_path)
-            logger.info(f"Found {len(train_img_path_list)} train, {len(test_img_path_list)} test images.")
+            logger.info(f"Found {len(self._train_img_path_list)} train, {len(self._test_img_path_list)} test images.")
+        # fail the preprocessing if no image has been processed
+        if len(self._train_img_path_list) == 0 and len(self._test_img_path_list) == 0:
+            self._dsm.delete_directory_structure()
+            raise RuntimeError("No image has been processed, must be some kind of mistake.")
         logger.info(f"Done processing.")
 
     def train_batch_generator(self,
