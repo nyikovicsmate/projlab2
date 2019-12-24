@@ -10,6 +10,7 @@ from state import State
 from pixelwise_a3c_model import PixelwiseA3CModel
 
 
+# noinspection PyPep8Naming
 class PixelwiseA3CNetwork:
     """
     Pixelwise asyncron agent network.
@@ -18,13 +19,12 @@ class PixelwiseA3CNetwork:
     def __init__(self,
                  input_shape: Tuple[int, int, int, int]):  # (batch size, width, height, channels)
         self.input_shape = input_shape
-        # self.global_model = PixelwiseA3CModel(batch_size=self.input_shape[0], input_shape=self.input_shape[1:4])
         self.local_model = PixelwiseA3CModel(batch_size=self.input_shape[0], input_shape=self.input_shape[1:4])
 
     def train(self,
               batch_generator: Iterator,
               epochs: int,
-              steps_per_episode: int = 4,
+              steps_per_episode: int = 5,
               learning_rate: float = 0.001,
               discount_factor: float = 0.95,
               resume_training: bool = False):
@@ -55,9 +55,6 @@ class PixelwiseA3CNetwork:
                                              epsilon=1e-8)
         for epoch in range(epochs_elapsed, epochs):
             logger.info(f"epoch {epoch}")
-            # load global network variables
-            # self.local_model.actor_model.set_weights(self.global_model.actor_model.get_weights())
-            # self.local_model.critic_model.set_weights(self.global_model.critic_model.get_weights())
             orig_img_batch, noisy_img_batch = next(batch_generator)
             if len(orig_img_batch) == 0 or len(noisy_img_batch) == 0:
                 logger.warning("Generator did not yield any original or noisiy (or both) image, stopping training.")
@@ -70,7 +67,6 @@ class PixelwiseA3CNetwork:
             past_action_entropy = {}
             with tf.GradientTape() as tape:
                 for t in range(steps_per_episode):
-                    # logger.info(f"step {t}")
                     image_batch_nchw = tf.transpose(s_t0, perm=[0, 2, 3, 1])
                     # predict the actions and values
                     a_t, V_t = self.local_model(image_batch_nchw)
@@ -108,7 +104,7 @@ class PixelwiseA3CNetwork:
                     actor_loss -= log_prob * A
                     # Entropy is maximized
                     actor_loss -= beta * entropy
-                    actor_loss *= 0.5 # multiply loss by 0.5 coefficient
+                    actor_loss *= 0.5  # multiply loss by 0.5 coefficient
                     # Accumulate gradients of value function
                     critic_loss += (R - V[t]) ** 2 / 2
 
@@ -118,7 +114,7 @@ class PixelwiseA3CNetwork:
                 actor_grads = tape.gradient(total_loss, self.local_model.trainable_variables)
             optimizer.apply_gradients(zip(actor_grads, self.local_model.trainable_variables))
 
-            if epoch > 0 and (epoch % 50) - 1 == 0:
+            if epoch > 0 and (epoch + 1) % 50 == 0:
                 logger.info(f"Saving model after {epoch + 1} epochs.")
                 self.local_model.save_weights(model_file, overwrite=True, save_format="tf")
                 with open(model_epochs_file, "w") as f:

@@ -1,7 +1,7 @@
 import copy
-import numpy as np
+
 import cv2
-import tensorflow as tf
+import numpy as np
 
 
 class State:
@@ -9,8 +9,8 @@ class State:
 
     @staticmethod
     def update(image_batch: np.ndarray,
-                      actions_batch: np.ndarray,
-                      in_place: bool = False) -> np.ndarray:
+               actions_batch: np.ndarray,
+               in_place: bool = False) -> np.ndarray:
         """
         :param image_batch:
         :param actions_batch: action img.shape-d mx with values 0-(N_ACTIONS-1)

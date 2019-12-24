@@ -1,7 +1,7 @@
-import time
 import argparse
-from logging_config import logger
+
 from image_dataset_manager import ImageDatasetManager
+from logging_config import logger
 from pixelwise_a3c_network import PixelwiseA3CNetwork
 
 

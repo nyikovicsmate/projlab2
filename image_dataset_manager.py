@@ -133,10 +133,6 @@ class ImageDatasetManager:
                     np.random.shuffle(idx_list)
             orig_img_list = np.array(orig_img_list, dtype=np.float32)
             noisy_img_list = np.array(noisy_img_list, dtype=np.float32)
-            # transpose the arrays to get (batch_size, width, height) shape
-            # (cv2 handles images in (h,w) format
-            orig_img_list = np.transpose(orig_img_list, axes=[0, 2, 1])
-            noisy_img_list = np.transpose(noisy_img_list, axes=[0, 2, 1])
             # yield the original and noisy images in a channel_first format
             yield orig_img_list[:, np.newaxis, :, :], noisy_img_list[:, np.newaxis, :, :]
 

@@ -26,7 +26,7 @@ class DirectoryStructureManager:
 
     def delete_directory_structure(self) -> None:
         """
-        Deletes the directory structure created by _create_dirs() function.
+        Deletes the directory structure created by self.create_directory_structure() function.
         WARNING: removes every file found under self.root_dir!
         :return: None
         """
@@ -61,7 +61,7 @@ class DirectoryStructureManager:
     @staticmethod
     def _delete_dir(path: str) -> None:
         """
-        :param path: file path
+        :param path: directory path
         :return: None
         """
         if os.path.exists(path):

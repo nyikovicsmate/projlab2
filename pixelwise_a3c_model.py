@@ -1,4 +1,5 @@
-from typing import Tuple, Optional, List, Union
+from typing import Tuple
+
 import tensorflow as tf
 
 
@@ -120,7 +121,7 @@ class PixelwiseA3CModel(tf.keras.models.Model):
         x = self.diconv4(x)
         actor = self.actor_diconv5(x)
         actor = self.actor_diconv6(actor)
-        actor = self.actor_conv7(actor) # output shape (batch_size, 9, width, height)
+        actor = self.actor_conv7(actor)  # output shape (batch_size, 9, width, height)
         critic = self.critic_diconv5(x)
         critic = self.critic_diconv6(critic)
         critic = self.critic_conv7(critic)  # output shape (batch_size, 1, width, height)
