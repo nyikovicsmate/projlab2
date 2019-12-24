@@ -19,7 +19,7 @@ class Runner:
         batch_generator = Runner.idm.train_batch_generator(batch_size, randomize=True)
         network = PixelwiseA3CNetwork(input_shape=(batch_size, Runner.w, Runner.h, 1))
         network.train(batch_generator=batch_generator,
-                      epochs=1000,
+                      episodes=1000,
                       resume_training=False)
 
     @staticmethod

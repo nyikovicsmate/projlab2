@@ -23,44 +23,44 @@ class PixelwiseA3CNetwork:
 
     def train(self,
               batch_generator: Iterator,
-              epochs: int,
+              episodes: int,
               steps_per_episode: int = 5,
               learning_rate: float = 0.001,
               discount_factor: float = 0.95,
               resume_training: bool = False):
         model_dir = os.path.join(os.getcwd(), "model")
         model_file = os.path.join(model_dir, "checkpoint")
-        model_epochs_file = os.path.join(model_dir, "epochs.txt")
-        epochs_elapsed = 0
+        model_episodes_file = os.path.join(model_dir, "episodes.txt")
+        episodes_elapsed = 0
         learning_rate_decay_rate = 0.9
         # resume a previously interrupted training
         if resume_training and os.path.exists(model_file):
             self.local_model.load_weights(model_file)
-            with open(model_epochs_file, "r") as f:
-                epochs_elapsed = int(f.readline())
+            with open(model_episodes_file, "r") as f:
+                episodes_elapsed = int(f.readline())
             logger.info(f"Resuming training.")
             logger.info(f"Using model file {model_file}")
-            learning_rate *= epochs_elapsed * learning_rate_decay_rate
-            epochs -= epochs_elapsed
-            if epochs_elapsed >= epochs:
-                logger.warning(f"Training epoch count exceeds originally intended: {epochs_elapsed} vs. {epochs}")
+            learning_rate *= episodes_elapsed * learning_rate_decay_rate
+            episodes -= episodes_elapsed
+            if episodes_elapsed >= episodes:
+                logger.warning(f"Training episode count exceeds originally intended: {episodes_elapsed} vs. {episodes}")
                 logger.warning("Stopping training.")
                 return
         learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=learning_rate,
-                                                                       decay_steps=epochs,
+                                                                       decay_steps=episodes,
                                                                        decay_rate=learning_rate_decay_rate)
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate,
                                              beta_1=0.9,
                                              beta_2=0.999,
                                              epsilon=1e-8)
-        for epoch in range(epochs_elapsed, epochs):
-            logger.info(f"epoch {epoch}")
+        for episode in range(episodes_elapsed, episodes):
+            logger.info(f"episode {episode}")
             orig_img_batch, noisy_img_batch = next(batch_generator)
             if len(orig_img_batch) == 0 or len(noisy_img_batch) == 0:
                 logger.warning("Generator did not yield any original or noisiy (or both) image, stopping training.")
                 return
             s_t0 = noisy_img_batch
-            epoch_r = 0
+            episode_r = 0
             r = {}  # reward
             V = {}  # expected total rewards from state
             past_action_log_prob = {}
@@ -85,9 +85,9 @@ class PixelwiseA3CNetwork:
                     r_t = self._mse(tf.cast(orig_img_batch, tf.float32), tf.cast(s_t0, tf.float32), s_t1)
                     r[t] = tf.cast(r_t, dtype=tf.float32)
                     s_t0 = s_t1
-                    epoch_r += np.mean(r_t) * np.power(discount_factor, t)
+                    episode_r += np.mean(r_t) * np.power(discount_factor, t)
 
-                logger.info(f"epoch reward: {epoch_r}")
+                logger.info(f"episode reward: {episode_r}")
                 R = 0
                 actor_loss = 0
                 critic_loss = 0
@@ -114,11 +114,11 @@ class PixelwiseA3CNetwork:
                 actor_grads = tape.gradient(total_loss, self.local_model.trainable_variables)
             optimizer.apply_gradients(zip(actor_grads, self.local_model.trainable_variables))
 
-            if epoch > 0 and (epoch + 1) % 50 == 0:
-                logger.info(f"Saving model after {epoch + 1} epochs.")
+            if episode > 0 and (episode + 1) % 50 == 0:
+                logger.info(f"Saving model after {episode + 1} episodes.")
                 self.local_model.save_weights(model_file, overwrite=True, save_format="tf")
-                with open(model_epochs_file, "w") as f:
-                    f.write(str(epoch + 1))
+                with open(model_episodes_file, "w") as f:
+                    f.write(str(episode + 1))
 
     def predict(self,
                 batch_generator: Iterator,
