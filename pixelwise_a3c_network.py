@@ -71,7 +71,7 @@ class PixelwiseA3CNetwork:
                     # predict the actions and values
                     a_t, V_t = self.local_model(image_batch_nchw)
                     # sample the actions
-                    sampled_a_t = self._sample_tf(a_t)
+                    sampled_a_t = self._sample_random(a_t)
                     # clip distribution into range to avoid 0 values, which cause problem with calculating logarithm
                     a_t = tf.clip_by_value(a_t, 1e-6, 1)
                     a_t = tf.transpose(a_t, perm=[0, 3, 1, 2])
@@ -137,7 +137,7 @@ class PixelwiseA3CNetwork:
             # predict the actions and values
             a_t, _ = self.local_model(image_batch_nchw)
             # sample the actions
-            sampled_a_t = self._sample_tf(a_t)
+            sampled_a_t = self._sample_most_probable(a_t)
             # update the current state/image with the predicted actions
             s_t1 = State.update(s_t0, sampled_a_t.numpy())
             s_t0 = s_t1
@@ -176,7 +176,7 @@ class PixelwiseA3CNetwork:
     @tf.function
     def _mylog_prob(data, indexes):
         """
-        Selects elements from a multidimensional array.
+        Selectts elements from a multidimensional array.
         :param data: image_batch
         :param indexes: indices to select
         :return: the selected indices from data eg.: data=[[11, 2], [3, 4]] indexes=[0,1] --> [11, 4]
@@ -210,7 +210,7 @@ class PixelwiseA3CNetwork:
 
     @staticmethod
     @tf.function
-    def _sample_tf(distribution):
+    def _sample_random(distribution):
         """
         Samples the image action distribution returned by the last softmax activation.
         :param distribution: output of a softmax activated layer, an array with probability distributions,
@@ -220,5 +220,19 @@ class PixelwiseA3CNetwork:
         d = tf.reshape(distribution, (-1, distribution.shape[-1]))
         d = tf.math.log(d)
         d = tf.random.categorical(d, num_samples=1)
+        d = tf.reshape(d, distribution.shape[0:-1])
+        return d
+
+    @staticmethod
+    @tf.function
+    def _sample_most_probable(distribution):
+        """
+        Returns the most probable action index based on the distribution returned by the last softmax activation.
+        :param distribution: output of a softmax activated layer, an array with probability distributions,
+        usually shaped (batch_size, channels, widht, height, number_of_actions) NCHW!
+        :return: array shaped of (batch_size, channels, widht, height)
+        """
+        d = tf.reshape(distribution, (-1, distribution.shape[-1]))
+        d = tf.argmax(d, axis=1)
         d = tf.reshape(d, distribution.shape[0:-1])
         return d
