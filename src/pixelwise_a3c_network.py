@@ -1,13 +1,11 @@
-import os
-from typing import Tuple, Iterator
-
+import pathlib
 import cv2
 import tensorflow as tf
 import numpy as np
-
-from logging_config import logger
-from state import State
+from typing import Tuple, Iterator
+from src import *
 from pixelwise_a3c_model import PixelwiseA3CModel
+from state import State
 
 
 # noinspection PyPep8Naming
@@ -28,14 +26,15 @@ class PixelwiseA3CNetwork:
               learning_rate: float = 0.001,
               discount_factor: float = 0.95,
               resume_training: bool = False):
-        model_dir = os.path.join(os.getcwd(), "model")
-        model_file = os.path.join(model_dir, "checkpoint")
-        model_episodes_file = os.path.join(model_dir, "episodes.txt")
+        model_dir = pathlib.Path.joinpath(PROJECT_ROOT, "model")
+        model_file = pathlib.Path.joinpath(model_dir, "checkpoint")
+        model_episodes_file = pathlib.Path.joinpath(model_dir, "episodes.txt")
         episodes_elapsed = 0
         learning_rate_decay_rate = 0.9
         # resume a previously interrupted training
-        if resume_training and os.path.exists(model_file):
+        if resume_training and pathlib.Path.exists(model_file):
             self.local_model.load_weights(model_file)
+            # noinspection PyTypeChecker
             with open(model_episodes_file, "r") as f:
                 episodes_elapsed = int(f.readline())
             logger.info(f"Resuming training.")
@@ -117,17 +116,18 @@ class PixelwiseA3CNetwork:
             if episode > 0 and (episode + 1) % 50 == 0:
                 logger.info(f"Saving model after {episode + 1} episodes.")
                 self.local_model.save_weights(model_file, overwrite=True, save_format="tf")
+                # noinspection PyTypeChecker
                 with open(model_episodes_file, "w") as f:
                     f.write(str(episode + 1))
 
     def predict(self,
                 batch_generator: Iterator,
                 steps_per_episode: int = 5):
-        predictions_dir = os.path.join(os.getcwd(), "predictions")
-        if not os.path.exists(predictions_dir):
-            os.mkdir(predictions_dir)
-        model_dir = os.path.join(os.getcwd(), "model")
-        model_file = os.path.join(model_dir, "checkpoint")
+        predictions_dir = pathlib.Path.joinpath(PROJECT_ROOT, "predictions")
+        if not pathlib.Path.exists(predictions_dir):
+            pathlib.Path.mkdir(predictions_dir)
+        model_dir = pathlib.Path.joinpath(PROJECT_ROOT, "model")
+        model_file = pathlib.Path.joinpath(model_dir, "checkpoint")
         self.local_model.load_weights(model_file)
 
         orig_img_batch, noisy_img_batch = next(batch_generator)
@@ -147,8 +147,8 @@ class PixelwiseA3CNetwork:
         for i in range(orig_image_batch_nchw.shape[0]):
             img_o = np.squeeze(orig_image_batch_nchw[i], axis=2) * 255
             img_p = np.squeeze(predicted_image_batch_nchw[i], axis=2) * 255
-            orig_img_path = os.path.join(predictions_dir, f"{i}_o.jpg")
-            predicted_img_path = os.path.join(predictions_dir, f"{i}_p.jpg")
+            orig_img_path = pathlib.Path.joinpath(predictions_dir, f"{i}_o.jpg")
+            predicted_img_path = pathlib.Path.joinpath(predictions_dir, f"{i}_p.jpg")
             cv2.imwrite(orig_img_path, img_o)
             cv2.imwrite(predicted_img_path, img_p)
 

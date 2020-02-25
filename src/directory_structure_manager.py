@@ -1,18 +1,18 @@
-import os
+import pathlib
 import time
-from logging_config import logger
+from src import logger
 
 
 class DirectoryStructureManager:
     def __init__(self,
-                 root_dir: str):
+                 root_dir: pathlib.Path):
         """
         :param root_dir: the desired root directory name for the prepocessed images
         """
-        self.root_dir = os.path.join(os.getcwd(), root_dir)
-        self.train_dir = os.path.join(self.root_dir, "train")
-        self.test_dir = os.path.join(self.root_dir, "test")
-        self.is_created = True if os.path.exists(self.train_dir) and os.path.exists(self.test_dir) else False
+        self.root_dir = root_dir
+        self.train_dir = pathlib.Path.joinpath(self.root_dir, "train")
+        self.test_dir = pathlib.Path.joinpath(self.root_dir, "test")
+        self.is_created = True if pathlib.Path.exists(self.train_dir) and pathlib.Path.exists(self.test_dir) else False
 
     def create_directory_structure(self) -> None:
         """
@@ -24,13 +24,13 @@ class DirectoryStructureManager:
         self.is_created = True
         logger.info(f"Finished creating directory structure under\n{self.root_dir}")
 
-    def delete_directory_structure(self) -> None:
+    def remove_directory_structure(self) -> None:
         """
         Deletes the directory structure created by self.create_directory_structure() function.
         WARNING: removes every file found under self.root_dir!
         :return: None
         """
-        self._delete_dirs()
+        self._remove_dirs()
         self.is_created = False
 
     def _create_dirs(self) -> None:
@@ -38,34 +38,37 @@ class DirectoryStructureManager:
         :return: None
         """
         # create preprocessed root directory
-        if os.path.exists(self.root_dir):
-            if len(os.listdir(self.root_dir)) != 0:
+        if pathlib.Path.exists(self.root_dir):
+            if pathlib.Path.stat(self.root_dir).st_size != 0:
                 raise FileExistsError(f"Root directory {self.root_dir} is not empty. "
                                       f"Only an empty directory can be root.")
         else:
-            os.mkdir(self.root_dir)
+            logger.info(f"Creating {self.root_dir}")
+            pathlib.Path.mkdir(self.root_dir)
             time.sleep(1)  # stop for 1 sec for the os to be able to catch up
         # create train and test directories
-        os.mkdir(self.train_dir)
-        os.mkdir(self.test_dir)
+        logger.info(f"Creating {self.train_dir}")
+        pathlib.Path.mkdir(self.train_dir)
+        logger.info(f"Creating {self.test_dir}")
+        pathlib.Path.mkdir(self.test_dir)
 
-    def _delete_dirs(self) -> None:
+    def _remove_dirs(self) -> None:
         """
         :return: None
         """
-        if os.path.exists(self.root_dir):
-            self._delete_dir(self.train_dir)
-            self._delete_dir(self.test_dir)
-            self._delete_dir(self.root_dir)
+        if pathlib.Path.exists(self.root_dir):
+            self._remove_dir(self.train_dir)
+            self._remove_dir(self.test_dir)
+            self._remove_dir(self.root_dir)
 
     @staticmethod
-    def _delete_dir(path: str) -> None:
+    def _remove_dir(path: pathlib.Path) -> None:
         """
         :param path: directory path
         :return: None
         """
-        if os.path.exists(path):
-            for file in os.listdir(path):
-                os.remove(os.path.join(path, file))
-            time.sleep(1)  # stop for 1 sec for the os to be able to catch up
-            os.rmdir(path)
+        logger.info(f"Removing {path}")
+        for file in path.iterdir():
+            pathlib.Path.unlink(file)
+        time.sleep(1)  # stop for 1 sec for the os to be able to catch up
+        pathlib.Path.rmdir(path)

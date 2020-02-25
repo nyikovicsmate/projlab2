@@ -1,6 +1,5 @@
-from typing import Tuple
-
 import tensorflow as tf
+from typing import Tuple
 
 
 # noinspection DuplicatedCode

@@ -1,16 +1,19 @@
-from directory_structure_manager import *
-from image_dataset_handler import *
-from typing import Tuple, List
 import numpy as np
 import cv2
+import pathlib
+from typing import Tuple, List
+
+from src import *
+from directory_structure_manager import DirectoryStructureManager
+from image_dataset_handler import ImageDatasetHandler, BSD68GrayHandler, WaterlooExploartionHandler
 
 
 class ImageDatasetManager:
     _handlers: List[ImageDatasetHandler]
 
     def __init__(self,
-                 dataset_src_dir: str,
-                 dataset_dst_dir: str,
+                 dataset_src_dir: pathlib.Path,
+                 dataset_dst_dir: pathlib.Path,
                  dst_shape: Tuple[int, int] = (70, 70),
                  split_ratio: float = 0.8,
                  ):
@@ -42,8 +45,8 @@ class ImageDatasetManager:
         """
         logger.info("Processing...")
         if overwrite:
-            logger.info("Deleting obsolete directory structure.")
-            self._dsm.delete_directory_structure()
+            logger.info("Removing obsolete directory structure.")
+            self._dsm.remove_directory_structure()
         if not self._dsm.is_created:
             logger.info("Creating directory structure.")
             self._dsm.create_directory_structure()
@@ -62,7 +65,7 @@ class ImageDatasetManager:
                 for idx, raw_train_img_path in enumerate(raw_train_img_path_list):
                     img = cv2.imread(raw_train_img_path)
                     img = self._process_image(img, self.dst_shape)
-                    full_path = os.path.join(self._dsm.train_dir, self.idx_to_img_name(idx))
+                    full_path = pathlib.Path.joinpath(self._dsm.train_dir, self.idx_to_img_name(idx))
                     cv2.imwrite(full_path, img)
                     self._train_img_path_list.append(full_path)
             logger.info(f"Processed {len(self._train_img_path_list)} train images.")
@@ -70,24 +73,20 @@ class ImageDatasetManager:
                 for idx, raw_test_img_path in enumerate(raw_test_img_path_list):
                     img = cv2.imread(raw_test_img_path)
                     img = self._process_image(img, self.dst_shape)
-                    full_path = os.path.join(self._dsm.test_dir, self.idx_to_img_name(idx))
+                    full_path = pathlib.Path.joinpath(self._dsm.test_dir, self.idx_to_img_name(idx))
                     cv2.imwrite(full_path, img)
                     self._test_img_path_list.append(full_path)
             logger.info(f"Processed {len(self._test_img_path_list)} test images.")
         else:
             logger.info("Using existing images.")
-            train_img_path_list = os.listdir(self._dsm.train_dir)
-            for img_path in train_img_path_list:
-                full_path = os.path.join(self._dsm.train_dir, img_path)
-                self._train_img_path_list.append(full_path)
-            test_img_path_list = os.listdir(self._dsm.test_dir)
-            for img_path in test_img_path_list:
-                full_path = os.path.join(self._dsm.test_dir, img_path)
-                self._test_img_path_list.append(full_path)
+            for img_path in self._dsm.train_dir.iterdir():
+                self._train_img_path_list.append(img_path)
+            for img_path in self._dsm.test_dir.iterdir():
+                self._test_img_path_list.append(img_path)
             logger.info(f"Found {len(self._train_img_path_list)} train, {len(self._test_img_path_list)} test images.")
         # fail the preprocessing if no image has been processed
         if len(self._train_img_path_list) == 0 and len(self._test_img_path_list) == 0:
-            self._dsm.delete_directory_structure()
+            self._dsm.remove_directory_structure()
             raise RuntimeError("No image has been processed, must be some kind of mistake.")
         logger.info(f"Done processing.")
 

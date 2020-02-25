@@ -1,14 +1,15 @@
 import argparse
-
-from image_dataset_manager import ImageDatasetManager
-from logging_config import logger
+import pathlib
+from src import *
 from pixelwise_a3c_network import PixelwiseA3CNetwork
+from image_dataset_manager import ImageDatasetManager
 
 
 class Runner:
     w, h = (70, 70)
-    idm = ImageDatasetManager(dataset_src_dir="raw_images",
-                              dataset_dst_dir="preprocessed_images",
+    data_dir = pathlib.Path.joinpath(PROJECT_ROOT, "data")
+    idm = ImageDatasetManager(dataset_src_dir=pathlib.Path.joinpath(data_dir, "raw"),
+                              dataset_dst_dir=pathlib.Path.joinpath(data_dir, "preprocessed"),
                               dst_shape=(w, h),
                               split_ratio=0.9)
     idm.preprocess(overwrite=False)
