@@ -1,8 +1,10 @@
 import os
+from abc import ABC, abstractmethod
 from typing import List
 
 
-class ImageDatasetHandler:
+class ImageDatasetHandler(ABC):
+    @abstractmethod
     def get_img_path_list(self,
                           dataset_src_dir: str) -> List[str]:
         """
