@@ -63,7 +63,7 @@ class ImageDatasetManager:
             logger.info(f"Found {len(raw_train_img_path_list)} train, {len(raw_test_img_path_list)} test images.")
             if len(raw_train_img_path_list) > 0:
                 for idx, raw_train_img_path in enumerate(raw_train_img_path_list):
-                    img = cv2.imread(raw_train_img_path)
+                    img = cv2.imread(str(raw_train_img_path))
                     img = self._process_image(img, self.dst_shape)
                     full_path = pathlib.Path.joinpath(self._dsm.train_dir, self.idx_to_img_name(idx))
                     cv2.imwrite(full_path, img)
@@ -71,7 +71,7 @@ class ImageDatasetManager:
             logger.info(f"Processed {len(self._train_img_path_list)} train images.")
             if len(raw_test_img_path_list) > 0:
                 for idx, raw_test_img_path in enumerate(raw_test_img_path_list):
-                    img = cv2.imread(raw_test_img_path)
+                    img = cv2.imread(str(raw_test_img_path))
                     img = self._process_image(img, self.dst_shape)
                     full_path = pathlib.Path.joinpath(self._dsm.test_dir, self.idx_to_img_name(idx))
                     cv2.imwrite(full_path, img)
@@ -115,7 +115,7 @@ class ImageDatasetManager:
             while curr_end_idx > len(idx_list):
                 idx_list = np.append(idx_list, idx_list)
             for idx in idx_list[curr_start_index:curr_end_idx]:
-                img = cv2.imread(self._train_img_path_list[idx], cv2.IMREAD_GRAYSCALE) / 255
+                img = cv2.imread(str(self._train_img_path_list[idx]), cv2.IMREAD_GRAYSCALE) / 255
                 if augment:
                     img = self._augment_image(img)
                 orig_img_list.append(img)
@@ -143,7 +143,7 @@ class ImageDatasetManager:
         :return: augmented image
         """
         # TODO
-        raise NotImplementedError()
+        pass
 
     @staticmethod
     def _add_noise(img: np.ndarray) -> np.ndarray:
@@ -183,8 +183,8 @@ class ImageDatasetManager:
             orig_shape = tuple([o * resize_factor for o in orig_shape])
             img = cv2.resize(src=img, dsize=(orig_shape[1], orig_shape[0]), interpolation=cv2.INTER_LINEAR)
         # randomly clip image
-        width_clip_idx_start = np.random.randint(low=0, high=orig_shape[1] - dst_shape[0])
-        height_clip_idx_start = np.random.randint(low=0, high=orig_shape[0] - dst_shape[1])
+        width_clip_idx_start = 0 if orig_shape[1] == dst_shape[0] else np.random.randint(low=0, high=orig_shape[1] - dst_shape[0])
+        height_clip_idx_start = 0 if orig_shape[0] == dst_shape[1] else np.random.randint(low=0, high=orig_shape[0] - dst_shape[1])
         img = img[height_clip_idx_start: height_clip_idx_start + dst_shape[1],
               width_clip_idx_start: width_clip_idx_start + dst_shape[0]]
         # grayscale image
