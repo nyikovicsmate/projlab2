@@ -170,23 +170,25 @@ class ImageDatasetManager:
         :param dst_shape: desired clip shape (width, height)
         :return: clipped grayscale image
         """
+        dst_w, dst_h = dst_shape
         # resize original image before clipping if needed
-        width_resize_factor = 0
-        height_resize_factor = 0
-        orig_shape = img.shape[0:2]  # only need the h,w values
-        if dst_shape[0] > orig_shape[1]:  # dst_shape format is (w,h) orig_shape however is (h,w) (cv2 speciality)
-            width_resize_factor = (dst_shape[0] // orig_shape[1]) + 1
-        if dst_shape[1] > orig_shape[0]:
-            height_resize_factor = (dst_shape[1] // orig_shape[0]) + 1
-        if width_resize_factor != 0 or height_resize_factor != 0:
-            resize_factor = width_resize_factor if width_resize_factor > height_resize_factor else height_resize_factor
-            orig_shape = tuple([o * resize_factor for o in orig_shape])
-            img = cv2.resize(src=img, dsize=(orig_shape[1], orig_shape[0]), interpolation=cv2.INTER_LINEAR)
+        resize_factor_w = 0
+        resize_factor_h = 0
+        src_h, src_w, src_c = img.shape  # size format is (w,h) image_shape however is (h,w) (cv2 speciality)
+        if dst_w > src_w:
+            resize_factor_w = np.ceil(dst_w / src_w).astype(np.uint8)
+        if dst_h > src_h:
+            resize_factor_h = np.ceil(dst_h / src_h).astype(np.uint8)
+        if resize_factor_w != 0 or resize_factor_h != 0:
+            resize_factor = np.maximum(resize_factor_w, resize_factor_h)
+            src_h *= resize_factor
+            src_w *= resize_factor
+            img = cv2.resize(src=img, dsize=(src_w, src_h), interpolation=cv2.INTER_LINEAR)
         # randomly clip image
-        width_clip_idx_start = 0 if orig_shape[1] == dst_shape[0] else np.random.randint(low=0, high=orig_shape[1] - dst_shape[0])
-        height_clip_idx_start = 0 if orig_shape[0] == dst_shape[1] else np.random.randint(low=0, high=orig_shape[0] - dst_shape[1])
-        img = img[height_clip_idx_start: height_clip_idx_start + dst_shape[1],
-              width_clip_idx_start: width_clip_idx_start + dst_shape[0]]
+        width_clip_idx_start = 0 if src_w == dst_w else np.random.randint(low=0, high=src_w - dst_w)
+        height_clip_idx_start = 0 if src_w == dst_h else np.random.randint(low=0, high=src_h - dst_h)
+        img = img[height_clip_idx_start: height_clip_idx_start + dst_h,
+                width_clip_idx_start: width_clip_idx_start + dst_w]
         # grayscale image
         img = cv2.cvtColor(src=img, code=cv2.COLOR_RGB2GRAY)
         return img
